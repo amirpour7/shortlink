@@ -1,0 +1,11 @@
+@import "./fonts.css";
+@import "tailwindcss";
+@import "./components.css";
+
+@source "../../public/index.html";
+@source "../../public/assets/script.js";
+
+@theme {
+  --font-sans: "Vazir", Tahoma, ui-sans-serif, system-ui, sans-serif;
+}
+

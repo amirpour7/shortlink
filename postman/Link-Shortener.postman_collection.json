@@ -1,0 +1,238 @@
+{
+  "info": {
+    "_postman_id": "b77a0c7e-5f36-4f20-b1cb-6c5e0f901abc",
+    "name": "Link Shortener API",
+    "description": "Postman collection for the Express Link Shortener API. Import the Local environment and run requests in order. The Create short URL request saves the returned short code for the redirect request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "originalUrl",
+      "value": "https://example.com/articles/express",
+      "type": "string"
+    },
+    {
+      "key": "shortCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shortUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "missingCode",
+      "value": "NoC0de",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Health endpoint returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Health response contains ok=true', function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api-docs/"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Swagger UI is available', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Swagger UI HTML is returned', function () { pm.expect(pm.response.headers.get('Content-Type')).to.include('text/html'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api-docs.json"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('OpenAPI document returns 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('OpenAPI document contains core endpoints', function () {",
+                  "    const spec = pm.response.json();",
+                  "    pm.expect(spec.openapi).to.eql('3.0.3');",
+                  "    pm.expect(spec.paths).to.have.property('/health');",
+                  "    pm.expect(spec.paths).to.have.property('/shorten');",
+                  "    pm.expect(spec.paths).to.have.property('/{code}');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "URL Shortener",
+      "item": [
+        {
+          "name": "Create short URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{originalUrl}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/shorten"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Short URL is created with HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Response contains a six-character code', function () { pm.expect(body.code).to.match(/^[A-Za-z0-9]{6}$/); });",
+                  "pm.test('Response contains a shorturl', function () { pm.expect(body.shorturl).to.be.a('string'); });",
+                  "pm.collectionVariables.set('shortCode', body.code);",
+                  "pm.collectionVariables.set('shortUrl', body.shorturl);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Redirect using saved code (expect 302)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/{{shortCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Short code returns HTTP 302', function () { pm.response.to.have.status(302); });",
+                  "pm.test('Location header points to the original URL', function () { pm.expect(pm.response.headers.get('Location')).to.eql(pm.variables.get('originalUrl')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing code (expect 404)",
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/{{missingCode}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unregistered short code returns HTTP 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('404 response has the expected error', function () { pm.expect(pm.response.json().error).to.eql('404 Not Found'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid URL (expect 422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"javascript:alert(1)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/shorten"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid URL returns HTTP 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('Invalid URL returns the documented error code', function () { pm.expect(pm.response.json().error).to.eql('invalid-json'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
