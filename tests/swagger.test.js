@@ -46,6 +46,20 @@ test("OpenAPI document contains the documented health and shortener operations",
     "Short URL created and stored successfully.",
   );
   assert.ok(swaggerDocument.components.schemas.Error);
+
+  const shortenResponses = swaggerDocument.paths["/shorten"].post.responses;
+  assert.deepEqual(
+    shortenResponses["400"].content["application/json"].examples.malformedJson.value,
+    { error: "invalid-json" },
+  );
+  assert.deepEqual(
+    shortenResponses["422"].content["application/json"].examples.invalidUrl.value,
+    { error: "invalid-url" },
+  );
+  assert.deepEqual(
+    shortenResponses["422"].content["application/json"].examples.invalidRequestBody.value,
+    { error: "invalid-request-body" },
+  );
 });
 
 test("GET /api-docs.json returns the generated OpenAPI document", async (t) => {

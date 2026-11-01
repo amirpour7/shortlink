@@ -50,6 +50,51 @@ function readPort(name, fallback) {
 }
 
 /**
+ * Parse the number of trusted reverse-proxy hops from the environment.
+ *
+ * Express uses this value to decide which address in X-Forwarded-For belongs
+ * to the client. Zero disables proxy trust. A positive integer trusts exactly
+ * that many proxy hops. The permissive boolean value `true` is deliberately
+ * rejected because it can allow clients to spoof their IP address.
+ *
+ * @param {string | undefined} rawValue Environment value, usually
+ * `TRUST_PROXY_HOPS`.
+ * @param {false | number} [fallback=false] Value used when the setting is
+ * missing or blank.
+ * @returns {false | number} `false` when proxy headers are not trusted, or
+ * the exact number of trusted proxy hops.
+ * @throws {Error} If the value is not a non-negative safe integer.
+ * @example
+ * parseTrustProxyHops("1"); // 1: trust exactly one reverse proxy
+ * parseTrustProxyHops("0"); // false: do not trust proxy headers
+ */
+function parseTrustProxyHops(rawValue, fallback = false) {
+  if (rawValue === undefined || rawValue.trim() === "") {
+    return fallback;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+
+  if (["false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  if (!/^\d+$/.test(normalized)) {
+    throw new Error(
+      "TRUST_PROXY_HOPS must be a non-negative integer. Do not use 'true'; configure the exact trusted proxy hop count.",
+    );
+  }
+
+  const hops = Number(normalized);
+
+  if (!Number.isSafeInteger(hops)) {
+    throw new Error("TRUST_PROXY_HOPS must be a non-negative safe integer.");
+  }
+
+  return hops === 0 ? false : hops;
+}
+
+/**
  * Parse an HTTP(S) origin used when constructing public short links.
  *
  * The value must be an origin only: credentials, paths, query strings and
@@ -161,6 +206,7 @@ const settings = {
   lookupRateLimitMax: readPositiveInteger("SHORT_CODE_LOOKUP_RATE_LIMIT_MAX", 300),
   allowedRedirectHosts: parseAllowedHosts(process.env.SHORTENER_ALLOWED_HOSTS || ""),
   swaggerEnabled: readBoolean("SWAGGER_ENABLED", true),
+  trustProxyHops: parseTrustProxyHops(process.env.TRUST_PROXY_HOPS, false),
 };
 
 module.exports = {
@@ -168,4 +214,5 @@ module.exports = {
   validateShortUrlBase,
   parseAllowedHosts,
   readBoolean,
+  parseTrustProxyHops,
 };

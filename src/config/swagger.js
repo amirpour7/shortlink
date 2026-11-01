@@ -49,7 +49,7 @@ function buildSwaggerDocument() {
               error: {
                 type: "string",
                 description: "Stable machine-readable error identifier.",
-                example: "invalid-json",
+                example: "internal-server-error",
               },
             },
           },

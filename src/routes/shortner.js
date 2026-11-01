@@ -48,10 +48,15 @@ const settings = require("../config/settings");
  *                   format: uri
  *                   example: http://localhost:3000/aB12xZ
  *       400:
- *         description: Malformed JSON or malformed HTTP request.
+ *         description: The request body contains malformed JSON syntax.
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               malformedJson:
+ *                 summary: Malformed JSON syntax
+ *                 value:
+ *                   error: invalid-json
  *       413:
  *         description: Request body exceeds the configured JSON size limit.
  *         content:
@@ -63,10 +68,19 @@ const settings = require("../config/settings");
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  *       422:
- *         description: URL is missing or does not satisfy the shortener URL policy.
+ *         description: The JSON body is not an object, or the supplied URL is missing or violates the URL policy.
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
+ *             examples:
+ *               invalidUrl:
+ *                 summary: Missing or invalid URL
+ *                 value:
+ *                   error: invalid-url
+ *               invalidRequestBody:
+ *                 summary: JSON body must be an object
+ *                 value:
+ *                   error: invalid-request-body
  *       429:
  *         description: Per-IP request limit has been exceeded.
  *         headers:
@@ -195,7 +209,7 @@ function createShortenerRouter(options = {}) {
       }
 
       if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
-        return res.status(422).json({ error: "invalid-json" });
+        return res.status(422).json({ error: "invalid-request-body" });
       }
 
       try {
@@ -208,7 +222,7 @@ function createShortenerRouter(options = {}) {
       } catch (error) {
         // Preserve the API's original error response for invalid URLs.
         if (error instanceof AppError && error.errorCode === "invalid-url") {
-          return res.status(422).json({ error: "invalid-json" });
+          return res.status(422).json({ error: "invalid-url" });
         }
 
         return next(error);

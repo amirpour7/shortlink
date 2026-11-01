@@ -107,3 +107,24 @@ test("readBoolean accepts common true and false values and rejects typos", () =>
     }
   }
 });
+
+
+test("TRUST_PROXY_HOPS accepts only an explicit non-negative hop count", () => {
+  assert.equal(settings.parseTrustProxyHops(undefined), false);
+  assert.equal(settings.parseTrustProxyHops(""), false);
+  assert.equal(settings.parseTrustProxyHops("0"), false);
+  assert.equal(settings.parseTrustProxyHops("false"), false);
+  assert.equal(settings.parseTrustProxyHops("1"), 1);
+  assert.equal(settings.parseTrustProxyHops("2"), 2);
+  assert.equal(settings.parseTrustProxyHops(" 1 "), 1);
+});
+
+test("TRUST_PROXY_HOPS rejects permissive, negative, and non-integer values", () => {
+  for (const value of ["true", "yes", "on", "-1", "1.5", "many", "Infinity"]) {
+    assert.throws(
+      () => settings.parseTrustProxyHops(value),
+      /TRUST_PROXY_HOPS must be a non-negative integer/,
+      `Expected ${value} to be rejected`,
+    );
+  }
+});

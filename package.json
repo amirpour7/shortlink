@@ -1,6 +1,6 @@
 {
   "name": "express-health-api",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "A documented Express URL shortener with SQLite, dotenv, Swagger UI, Tailwind CSS frontend, security middleware, and tests.",
   "main": "server.js",
   "scripts": {
@@ -15,7 +15,8 @@
     "build:css": "npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./public/assets/style.css --minify",
     "dev:css": "npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./public/assets/style.css --watch",
     "build": "npm run build:css",
-    "test:docs": "node --test tests/swagger.test.js"
+    "test:docs": "node --test tests/swagger.test.js",
+    "test:proxy": "node --test tests/proxy.test.js"
   },
   "keywords": [
     "nodejs",

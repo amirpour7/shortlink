@@ -98,7 +98,7 @@ test("POST /shorten returns 422 for an invalid URL", async (t) => {
   const response = await postShorten(baseUrl, "javascript:alert(1)");
 
   assert.equal(response.status, 422);
-  assert.deepEqual(await response.json(), { error: "invalid-json" });
+  assert.deepEqual(await response.json(), { error: "invalid-url" });
 });
 
 test("POST /shorten rejects credential-bearing and oversized URLs", async (t) => {
@@ -111,22 +111,32 @@ test("POST /shorten rejects credential-bearing and oversized URLs", async (t) =>
   for (const url of invalidUrls) {
     const response = await postShorten(baseUrl, url);
     assert.equal(response.status, 422);
-    assert.deepEqual(await response.json(), { error: "invalid-json" });
+    assert.deepEqual(await response.json(), { error: "invalid-url" });
   }
 });
 
-test("POST /shorten returns 422 when url is missing, empty, or body is not an object", async (t) => {
+test("POST /shorten returns invalid-url for a missing or invalid URL field", async (t) => {
   const baseUrl = await startTestServer(t);
-  const invalidBodies = [{}, { url: "" }, { url: "   " }, { url: null }, []];
+  const invalidUrlBodies = [{}, { url: "" }, { url: "   " }, { url: null }];
 
-  for (const body of invalidBodies) {
+  for (const body of invalidUrlBodies) {
     const response = await postShorten(baseUrl, undefined, {
       body: JSON.stringify(body),
     });
 
     assert.equal(response.status, 422);
-    assert.deepEqual(await response.json(), { error: "invalid-json" });
+    assert.deepEqual(await response.json(), { error: "invalid-url" });
   }
+});
+
+test("POST /shorten returns invalid-request-body when JSON body is not an object", async (t) => {
+  const baseUrl = await startTestServer(t);
+  const response = await postShorten(baseUrl, undefined, {
+    body: JSON.stringify([]),
+  });
+
+  assert.equal(response.status, 422);
+  assert.deepEqual(await response.json(), { error: "invalid-request-body" });
 });
 
 test("POST /shorten returns 400 for malformed JSON syntax", async (t) => {

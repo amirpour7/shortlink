@@ -33,12 +33,18 @@ function getSwaggerDocument() {
  * Rate-limit overrides for tests or a separately configured instance.
  * @param {string|number} [options.jsonBodyLimit] JSON request body size limit.
  * @param {boolean} [options.swaggerEnabled] Enable Swagger endpoints for this app instance.
+ * @param {false | number} [options.trustProxyHops] Exact number of trusted reverse
+ * proxy hops. Use `false` for direct connections; never use `true`.
  * @returns {import("express").Express} Configured Express application.
  */
 function createApp(options = {}) {
   const app = express();
   const swaggerEnabled = options.swaggerEnabled ?? settings.swaggerEnabled;
+  const trustProxyHops = options.trustProxyHops ?? settings.trustProxyHops;
 
+  // Must be set before middleware such as express-rate-limit reads req.ip.
+  // Trust only the explicitly configured number of reverse-proxy hops.
+  app.set("trust proxy", trustProxyHops);
   app.disable("x-powered-by");
 
   // Swagger UI needs its inline bootstrap script. Relax CSP only on the docs
