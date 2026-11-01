@@ -90,3 +90,46 @@ test("Rate Limiting uses the client IP supplied by one trusted reverse proxy", a
     error: "rate-limit-exceeded",
   });
 });
+
+test("X-Forwarded-For validation does not log ERR_ERL_UNEXPECTED_X_FORWARDED_FOR", async (t) => {
+  const directApp = app.createApp({
+    trustProxyHops: false,
+    rateLimit: { windowMs: 60_000, limit: 1, lookupLimit: 100 },
+  });
+  const baseUrl = await startTestServer(t, directApp);
+  const loggedMessages = [];
+  const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  console.error = (...args) => loggedMessages.push(args.map(String).join(" "));
+  console.warn = (...args) => loggedMessages.push(args.map(String).join(" "));
+
+  let firstResponse;
+  let secondResponse;
+
+  try {
+    firstResponse = await postShorten(
+      baseUrl,
+      "https://example.com/direct-client-first",
+      "198.51.100.10",
+    );
+    secondResponse = await postShorten(
+      baseUrl,
+      "https://example.com/direct-client-second",
+      "203.0.113.20",
+    );
+  } finally {
+    console.error = originalConsoleError;
+    console.warn = originalConsoleWarn;
+  }
+
+  assert.equal(firstResponse.status, 201);
+  // Without a trusted proxy, forwarded headers are ignored. Both requests are
+  // correctly grouped under the direct socket address rather than spoofed XFF.
+  assert.equal(secondResponse.status, 429);
+  assert.doesNotMatch(
+    loggedMessages.join("\n"),
+    /ERR_ERL_UNEXPECTED_X_FORWARDED_FOR/,
+  );
+  await firstResponse.text();
+  await secondResponse.text();
+});

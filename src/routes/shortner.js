@@ -1,5 +1,5 @@
 const express = require("express");
-const { rateLimit } = require("express-rate-limit");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 const {
   createShortUrl,
   geturl,
@@ -175,21 +175,34 @@ function createShortenerRouter(options = {}) {
   );
   const windowMs = options.rateLimit?.windowMs ?? settings.shortenRateLimitWindowMs;
 
-  const shortenLimiter = rateLimit({
+  // Use Express's resolved client IP, never parse X-Forwarded-For ourselves.
+  // `ipKeyGenerator` groups IPv6 addresses by subnet to prevent address rotation
+  // from bypassing the rate limit. The app's `trust proxy` setting must therefore
+  // be configured to match the actual trusted proxy chain.
+  const getRateLimitKey = (req) => ipKeyGenerator(req.ip);
+  const commonRateLimitOptions = {
     windowMs,
-    limit: options.rateLimit?.limit ?? settings.shortenRateLimitMax,
     standardHeaders: "draft-8",
     legacyHeaders: false,
+    keyGenerator: getRateLimitKey,
+    // The custom key generator uses Express's req.ip. This validation is not
+    // applicable to this strategy and can produce a false positive when an
+    // upstream platform adds X-Forwarded-For before Express trust is configured.
+    // Correct proxy trust is configured separately in src/app.js.
+    validate: { xForwardedForHeader: false },
+  };
+
+  const shortenLimiter = rateLimit({
+    ...commonRateLimitOptions,
+    limit: options.rateLimit?.limit ?? settings.shortenRateLimitMax,
     handler: (req, res) => {
       res.status(429).json({ error: "rate-limit-exceeded" });
     },
   });
 
   const lookupLimiter = rateLimit({
-    windowMs,
+    ...commonRateLimitOptions,
     limit: options.rateLimit?.lookupLimit ?? settings.lookupRateLimitMax,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
     handler: (req, res) => {
       res.status(429).json({ error: "rate-limit-exceeded" });
     },

@@ -1,6 +1,6 @@
 {
   "name": "express-health-api",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "A documented Express URL shortener with SQLite, dotenv, Swagger UI, Tailwind CSS frontend, security middleware, and tests.",
   "main": "server.js",
   "scripts": {

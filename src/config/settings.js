@@ -94,6 +94,19 @@ function parseTrustProxyHops(rawValue, fallback = false) {
   return hops === 0 ? false : hops;
 }
 
+
+/**
+ * Choose a conservative default for deployments that terminate TLS at one
+ * platform reverse proxy. Development remains direct-access by default.
+ * Deployments with a different proxy chain must set TRUST_PROXY_HOPS explicitly.
+ *
+ * @param {string | undefined} nodeEnv Runtime environment name.
+ * @returns {false | number} One trusted hop in production, otherwise no proxy trust.
+ */
+function getDefaultTrustProxyHops(nodeEnv = process.env.NODE_ENV) {
+  return nodeEnv === "production" ? 1 : false;
+}
+
 /**
  * Parse an HTTP(S) origin used when constructing public short links.
  *
@@ -206,7 +219,10 @@ const settings = {
   lookupRateLimitMax: readPositiveInteger("SHORT_CODE_LOOKUP_RATE_LIMIT_MAX", 300),
   allowedRedirectHosts: parseAllowedHosts(process.env.SHORTENER_ALLOWED_HOSTS || ""),
   swaggerEnabled: readBoolean("SWAGGER_ENABLED", true),
-  trustProxyHops: parseTrustProxyHops(process.env.TRUST_PROXY_HOPS, false),
+  trustProxyHops: parseTrustProxyHops(
+    process.env.TRUST_PROXY_HOPS,
+    getDefaultTrustProxyHops(process.env.NODE_ENV),
+  ),
 };
 
 module.exports = {
@@ -215,4 +231,5 @@ module.exports = {
   parseAllowedHosts,
   readBoolean,
   parseTrustProxyHops,
+  getDefaultTrustProxyHops,
 };

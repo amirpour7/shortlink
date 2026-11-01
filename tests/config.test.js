@@ -128,3 +128,17 @@ test("TRUST_PROXY_HOPS rejects permissive, negative, and non-integer values", ()
     );
   }
 });
+
+test("production defaults to one trusted proxy hop while development stays direct", () => {
+  assert.equal(settings.getDefaultTrustProxyHops("production"), 1);
+  assert.equal(settings.getDefaultTrustProxyHops("development"), false);
+  assert.equal(settings.getDefaultTrustProxyHops("test"), false);
+  assert.equal(
+    settings.parseTrustProxyHops(undefined, settings.getDefaultTrustProxyHops("production")),
+    1,
+  );
+  assert.equal(
+    settings.parseTrustProxyHops("0", settings.getDefaultTrustProxyHops("production")),
+    false,
+  );
+});

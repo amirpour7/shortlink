@@ -4,6 +4,8 @@ const settings = require("./src/config/settings");
 
 const server = app.listen(settings.port, () => {
   console.log(`Server is running at ${settings.shortUrlBase}`);
+  const trustedProxyHops = app.get("trust proxy");
+  console.log(`Trusted reverse proxy hops: ${trustedProxyHops === false ? 0 : trustedProxyHops}`);
   if (settings.swaggerEnabled) {
     console.log(`API documentation: ${settings.shortUrlBase}/api-docs`);
   }
